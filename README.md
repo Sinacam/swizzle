@@ -18,5 +18,8 @@ Although it is almost certainly going to work on all platforms. It is only non-c
 `vecN<T>` is the template for a vector of `N` elements of type `T`, `dvecN`, `fvecN`, `ivecN` are aliases to its specialization.  
 All swizzles have unspecified types, but is guaranteed to be unique to swizzle.
 
+## Installation
+swizzle is header only, just `#include"swizzle.hpp"`. Requires C++17.
+
 ## Acknowledgements
 [eerorika](https://stackoverflow.com/a/65027725/4832499) for the union/struct hack.
