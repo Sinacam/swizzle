@@ -15,8 +15,7 @@ v2[1] = 42;
 ```
 
 Although it is almost certainly going to work on all platforms. It is only non-compliant if you use it.  
-`vecN<T>` is the template for a vector of `N` elements of type `T`.  
-`dvecN`, `fvecN`, `ivecN` are aliases to its specialization.  
+`vecN<T>` is the template for a vector of `N` elements of type `T`, `dvecN`, `fvecN`, `ivecN` are aliases to its specialization.  
 All swizzles have unspecified types, but is guaranteed to be unique to swizzle.
 
 ## Acknowledgements
