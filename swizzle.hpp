@@ -17,6 +17,20 @@
 #include <type_traits>
 #include <utility>
 
+namespace swzl
+{
+    using std::size_t;
+
+    template <typename>
+    union vec2;
+
+    template <typename>
+    union vec3;
+
+    template <typename>
+    union vec4;
+}
+
 namespace swzl::detail
 {
     // is_swizzlable_func returns std::true_type if Swizzler can be assigned to Vector
@@ -27,7 +41,7 @@ namespace swzl::detail
     template <typename Vector, typename Swizzler>
     constexpr auto is_swizzlable_func(int)
         -> std::bool_constant<std::decay_t<Vector>::dimension::value ==
-                              std::decay_t<Swizzler>::swizzler_arity::value>;
+                              std::decay_t<Swizzler>::dimension::value>;
 
     template <typename Vector, typename Swizzler>
     struct is_swizzlable : decltype(is_swizzlable_func<Vector, Swizzler>(0))
@@ -36,6 +50,48 @@ namespace swzl::detail
 
     template <typename Vector, typename Swizzler>
     inline constexpr auto is_swizzlable_v = is_swizzlable<Vector, Swizzler>::value;
+
+    template<typename T>
+    constexpr auto dimension_func(float) -> std::integral_constant<size_t, 0>;
+
+    template<typename T>
+    constexpr auto dimension_func(int) -> typename T::dimension;
+
+    template<typename T>
+    struct dimension : decltype(dimension_func<T>(0)) {};
+
+    template<typename T>
+    inline constexpr auto dimension_v = dimension<T>::value;
+
+    template<typename T>
+    struct is_vec_like : std::bool_constant<(dimension_v<T> > 0)> {};
+
+    template<typename T>
+    inline constexpr auto is_vec_like_v = is_vec_like<T>::value;
+
+    template<size_t n, typename T>
+    struct vec_of;
+
+    template<typename T>
+    struct vec_of<2, T>
+    {
+        using type = vec2<T>;
+    };
+
+    template<typename T>
+    struct vec_of<3, T>
+    {
+        using type = vec3<T>;
+    };
+
+    template<typename T>
+    struct vec_of<4, T>
+    {
+        using type = vec4<T>;
+    };
+
+    template<size_t n, typename T>
+    using vec_of_t = typename vec_of<n, T>::type;
 
     template <typename Vector, typename Swizzler>
     using enable_if_swizzlable_t = std::enable_if_t<is_swizzlable_v<Vector, Swizzler>, int>;
@@ -73,7 +129,7 @@ namespace swzl::detail
     struct                                                                                         \
     {                                                                                              \
         using value_type = T;                                                                      \
-        using swizzler_arity = std::integral_constant<std::size_t, 2>;                             \
+        using dimension = std::integral_constant<size_t, 2>;                             \
         T __VA_ARGS__;                                                                             \
         template <typename Rhs, detail::enable_if_convertible_t<Rhs, vec2<T>> = 0>                 \
         auto& operator=(Rhs rhs)                                                                   \
@@ -95,7 +151,7 @@ namespace swzl::detail
     struct                                                                                         \
     {                                                                                              \
         using value_type = T;                                                                      \
-        using swizzler_arity = std::integral_constant<std::size_t, 3>;                             \
+        using dimension = std::integral_constant<size_t, 3>;                             \
         T __VA_ARGS__;                                                                             \
         template <typename Rhs, detail::enable_if_convertible_t<Rhs, vec3<T>> = 0>                 \
         auto& operator=(Rhs rhs)                                                                   \
@@ -119,7 +175,7 @@ namespace swzl::detail
     struct                                                                                         \
     {                                                                                              \
         using value_type = T;                                                                      \
-        using swizzler_arity = std::integral_constant<std::size_t, 4>;                             \
+        using dimension = std::integral_constant<size_t, 4>;                             \
         T __VA_ARGS__;                                                                             \
         template <typename Rhs, detail::enable_if_convertible_t<Rhs, vec4<T>> = 0>                 \
         auto& operator=(Rhs rhs)                                                                   \
@@ -145,19 +201,11 @@ namespace swzl::detail
 
 namespace swzl
 {
-    template <typename>
-    union vec2;
-
-    template <typename>
-    union vec3;
-
-    template <typename>
-    union vec4;
-
     template <typename T>
     union vec2
     {
-        using dimension = std::integral_constant<std::size_t, 2>;
+        using value_type = T;
+        using dimension = std::integral_constant<size_t, 2>;
         VEC2_MEMBER(x, y);
         VEC2_MEMBER(r, g);
         VEC2_MEMBER(s, t);
@@ -183,6 +231,58 @@ namespace swzl
             return *this;
         }
 
+        auto& operator+=(vec2 rhs)
+        {
+            x += rhs.x;
+            y += rhs.y;
+            return *this;
+        }
+
+        auto operator+(vec2 rhs)
+        {
+            auto tmp = *this;
+            return tmp += rhs;
+        }
+
+        auto& operator-=(vec2 rhs)
+        {
+            x -= rhs.x;
+            y -= rhs.y;
+            return *this;
+        }
+
+        auto operator-(vec2 rhs)
+        {
+            auto tmp = *this;
+            return tmp -= rhs;
+        }
+
+        auto& operator*=(T rhs)
+        {
+            x *= rhs;
+            y *= rhs;
+            return *this;
+        }
+
+        auto operator*(T rhs)
+        {
+            auto tmp = *this;
+            return tmp *= rhs;
+        }
+
+        auto& operator/=(T rhs)
+        {
+            x /= rhs;
+            y /= rhs;
+            return *this;
+        }
+
+        auto operator/(T rhs)
+        {
+            auto tmp = *this;
+            return tmp /= rhs;
+        }
+
         auto& operator[](int i) { return ((T*)this)[i]; }
     };
 
@@ -192,7 +292,8 @@ namespace swzl
     template <typename T>
     union vec3
     {
-        using dimension = std::integral_constant<std::size_t, 3>;
+        using value_type = T;
+        using dimension = std::integral_constant<size_t, 3>;
         VEC3_MEMBER(x, y, z);
         VEC3_MEMBER(r, g, b);
         VEC3_MEMBER(s, t, p);
@@ -219,6 +320,62 @@ namespace swzl
             return *this;
         }
 
+        auto& operator+=(vec3 rhs)
+        {
+            x += rhs.x;
+            y += rhs.y;
+            z += rhs.z;
+            return *this;
+        }
+
+        auto operator+(vec3 rhs)
+        {
+            auto tmp = *this;
+            return tmp += rhs;
+        }
+
+        auto& operator-=(vec3 rhs)
+        {
+            x -= rhs.x;
+            y -= rhs.y;
+            z -= rhs.z;
+            return *this;
+        }
+
+        auto operator-(vec3 rhs)
+        {
+            auto tmp = *this;
+            return tmp -= rhs;
+        }
+
+        auto& operator*=(T rhs)
+        {
+            x *= rhs;
+            y *= rhs;
+            z *= rhs;
+            return *this;
+        }
+
+        auto operator*(T rhs)
+        {
+            auto tmp = *this;
+            return tmp *= rhs;
+        }
+
+        auto& operator/=(T rhs)
+        {
+            x /= rhs;
+            y /= rhs;
+            z /= rhs;
+            return *this;
+        }
+
+        auto operator/(T rhs)
+        {
+            auto tmp = *this;
+            return tmp /= rhs;
+        }
+
         auto& operator[](int i) { return ((T*)this)[i]; }
     };
 
@@ -228,7 +385,8 @@ namespace swzl
     template <typename T>
     union vec4
     {
-        using dimension = std::integral_constant<std::size_t, 4>;
+        using value_type = T;
+        using dimension = std::integral_constant<size_t, 4>;
         VEC4_MEMBER(x, y, z, w);
         VEC4_MEMBER(r, g, b, a);
         VEC4_MEMBER(s, t, p, q);
@@ -256,11 +414,93 @@ namespace swzl
             return *this;
         }
 
+        auto& operator+=(vec4 rhs)
+        {
+            x += rhs.x;
+            y += rhs.y;
+            z += rhs.z;
+            w += rhs.w;
+            return *this;
+        }
+
+        auto operator+(vec4 rhs)
+        {
+            auto tmp = *this;
+            return tmp += rhs;
+        }
+
+        auto& operator-=(vec4 rhs)
+        {
+            x -= rhs.x;
+            y -= rhs.y;
+            z -= rhs.z;
+            w -= rhs.w;
+            return *this;
+        }
+
+        auto operator-(vec4 rhs)
+        {
+            auto tmp = *this;
+            return tmp -= rhs;
+        }
+
+        auto& operator*=(T rhs)
+        {
+            x *= rhs;
+            y *= rhs;
+            z *= rhs;
+            w *= rhs;
+            return *this;
+        }
+
+        auto operator*(T rhs)
+        {
+            auto tmp = *this;
+            return tmp *= rhs;
+        }
+
+        auto& operator/=(T rhs)
+        {
+            x /= rhs;
+            y /= rhs;
+            z /= rhs;
+            w /= rhs;
+            return *this;
+        }
+
+        auto operator/(T rhs)
+        {
+            auto tmp = *this;
+            return tmp /= rhs;
+        }
+
+
         auto& operator[](int i) { return ((T*)this)[i]; }
     };
 
     template <typename Swizzler>
     vec4(Swizzler) -> vec4<typename Swizzler::value_type>;
+
+    template<typename Vec>
+    struct is_vec : std::false_type {};
+
+    template<typename T>
+    struct is_vec<vec2<T>> : std::true_type {};
+
+    template<typename T>
+    struct is_vec<vec3<T>> : std::true_type {};
+
+    template<typename T>
+    struct is_vec<vec4<T>> : std::true_type {};
+
+    template<typename T>
+    inline constexpr auto is_vec_v = is_vec<T>::value;
+
+    template<typename Vec, std::enable_if_t<is_vec_v<Vec>, int> = 0>
+    inline auto operator*(typename Vec::value_type s, Vec v)
+    {
+        return v * s;
+    }
 
     using fvec2 = vec2<float>;
     using dvec2 = vec2<double>;
