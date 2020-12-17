@@ -8,13 +8,6 @@ v2.yxz = v1.rgb;
 v2.spt = swzl::dvec3{5, 6, 7};
 ```
 
-The only non-compliant component is `operator[]`
-
-```c++
-v2[1] = 42;
-```
-
-Although it is almost certainly going to work on all platforms. It is only non-compliant if you use it.  
 `vecN<T>` is the template for a vector of `N` elements of type `T`. `dvecN`, `fvecN`, `ivecN` are aliases to its specialization for `double`, `float`, `int`.  
 All swizzles have unspecified types, but is guaranteed to be unique to swizzle.
 
