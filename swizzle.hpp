@@ -6,10 +6,6 @@
 //      swzl::dvec4 v2 = v1.xxyy;
 //      v2.yxz = v1.rgb;
 //      v2.spt = swzl::dvec3{5, 6, 7};
-// The only non-compliant component is operator[]
-//      v2[1] = 42;
-// Although it is almost certainly going to work on all platforms. It is only
-// non-compliant if you use it.
 // vecN<T> is the template for a vector of N elements of type T.
 // dvecN, fvecN, ivecN are aliases to its specialization.
 // All swizzles have unspecified types, but is guaranteed to be unique to swizzle.
@@ -29,7 +25,7 @@ namespace swzl
 
     template <typename>
     union vec4;
-}
+} // namespace swzl
 
 namespace swzl::detail
 {
@@ -51,46 +47,50 @@ namespace swzl::detail
     template <typename Vector, typename Swizzler>
     inline constexpr auto is_swizzlable_v = is_swizzlable<Vector, Swizzler>::value;
 
-    template<typename T>
+    template <typename T>
     constexpr auto dimension_func(float) -> std::integral_constant<size_t, 0>;
 
-    template<typename T>
+    template <typename T>
     constexpr auto dimension_func(int) -> typename T::dimension;
 
-    template<typename T>
-    struct dimension : decltype(dimension_func<T>(0)) {};
+    template <typename T>
+    struct dimension : decltype(dimension_func<T>(0))
+    {
+    };
 
-    template<typename T>
+    template <typename T>
     inline constexpr auto dimension_v = dimension<T>::value;
 
-    template<typename T>
-    struct is_vec_like : std::bool_constant<(dimension_v<T> > 0)> {};
+    template <typename T>
+    struct is_vec_like : std::bool_constant<(dimension_v<T> > 0)>
+    {
+    };
 
-    template<typename T>
+    template <typename T>
     inline constexpr auto is_vec_like_v = is_vec_like<T>::value;
 
-    template<size_t n, typename T>
+    template <size_t n, typename T>
     struct vec_of;
 
-    template<typename T>
+    template <typename T>
     struct vec_of<2, T>
     {
         using type = vec2<T>;
     };
 
-    template<typename T>
+    template <typename T>
     struct vec_of<3, T>
     {
         using type = vec3<T>;
     };
 
-    template<typename T>
+    template <typename T>
     struct vec_of<4, T>
     {
         using type = vec4<T>;
     };
 
-    template<size_t n, typename T>
+    template <size_t n, typename T>
     using vec_of_t = typename vec_of<n, T>::type;
 
     template <typename Vector, typename Swizzler>
@@ -110,40 +110,51 @@ namespace swzl::detail
 // These macros are then used within vec_mem.hpp to define VECN_MEMBER, which exhaustively
 // lists all possible combinations of swizzling.
 
+#define PP_COUNT(...) PP_COUNT_(__VA_ARGS__, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+#define PP_COUNT_(_1, _2, _3, _4, _5, _6, _7, _8, _9, N, ...) N
+
 #define VEC_BASIC(var, ...)                                                                        \
     struct                                                                                         \
     {                                                                                              \
-        T __VA_ARGS__;                                                                             \
+        enum idx                                                                                   \
+        {                                                                                          \
+            __VA_ARGS__                                                                            \
+        };                                                                                         \
+        T _data[PP_COUNT(__VA_ARGS__)];                                                            \
         auto& operator=(T rhs)                                                                     \
         {                                                                                          \
-            var = rhs;                                                                             \
+            _data[var] = rhs;                                                                      \
             return *this;                                                                          \
         }                                                                                          \
-        operator T&() & { return var; }                                                            \
-        operator const T&() const& { return var; }                                                 \
-        operator T() && { return var; }                                                            \
-        T* operator&() { return &var; }                                                            \
+        operator T&() & { return _data[var]; }                                                     \
+        operator const T&() const& { return _data[var]; }                                          \
+        operator T() && { return _data[var]; }                                                     \
+        T* operator&() { return &_data[var]; }                                                     \
     } var
 
 #define VEC_SWIZZLE2(varx, vary, ...)                                                              \
     struct                                                                                         \
     {                                                                                              \
         using value_type = T;                                                                      \
-        using dimension = std::integral_constant<size_t, 2>;                             \
-        T __VA_ARGS__;                                                                             \
+        using dimension = std::integral_constant<size_t, 2>;                                       \
+        enum idx                                                                                   \
+        {                                                                                          \
+            __VA_ARGS__                                                                            \
+        };                                                                                         \
+        T _data[PP_COUNT(__VA_ARGS__)];                                                            \
         template <typename Rhs, detail::enable_if_convertible_t<Rhs, vec2<T>> = 0>                 \
         auto& operator=(Rhs rhs)                                                                   \
         {                                                                                          \
             vec2<T> v = rhs;                                                                       \
-            varx = v.x;                                                                            \
-            vary = v.y;                                                                            \
+            _data[varx] = v.x;                                                                     \
+            _data[vary] = v.y;                                                                     \
             return *this;                                                                          \
         }                                                                                          \
         template <typename Vec2>                                                                   \
         void swizzle_to(Vec2&& v)                                                                  \
         {                                                                                          \
-            v.x = varx;                                                                            \
-            v.y = vary;                                                                            \
+            v.x = _data[varx];                                                                     \
+            v.y = _data[vary];                                                                     \
         }                                                                                          \
     } varx##vary
 
@@ -151,23 +162,27 @@ namespace swzl::detail
     struct                                                                                         \
     {                                                                                              \
         using value_type = T;                                                                      \
-        using dimension = std::integral_constant<size_t, 3>;                             \
-        T __VA_ARGS__;                                                                             \
+        using dimension = std::integral_constant<size_t, 3>;                                       \
+        enum idx                                                                                   \
+        {                                                                                          \
+            __VA_ARGS__                                                                            \
+        };                                                                                         \
+        T _data[PP_COUNT(__VA_ARGS__)];                                                            \
         template <typename Rhs, detail::enable_if_convertible_t<Rhs, vec3<T>> = 0>                 \
         auto& operator=(Rhs rhs)                                                                   \
         {                                                                                          \
             vec3<T> v = rhs;                                                                       \
-            varx = v.x;                                                                            \
-            vary = v.y;                                                                            \
-            varz = v.z;                                                                            \
+            _data[varx] = v.x;                                                                     \
+            _data[vary] = v.y;                                                                     \
+            _data[varz] = v.z;                                                                     \
             return *this;                                                                          \
         }                                                                                          \
         template <typename Vec3>                                                                   \
         void swizzle_to(Vec3&& v)                                                                  \
         {                                                                                          \
-            v.x = varx;                                                                            \
-            v.y = vary;                                                                            \
-            v.z = varz;                                                                            \
+            v.x = _data[varx];                                                                     \
+            v.y = _data[vary];                                                                     \
+            v.z = _data[varz];                                                                     \
         }                                                                                          \
     } varx##vary##varz
 
@@ -175,25 +190,29 @@ namespace swzl::detail
     struct                                                                                         \
     {                                                                                              \
         using value_type = T;                                                                      \
-        using dimension = std::integral_constant<size_t, 4>;                             \
-        T __VA_ARGS__;                                                                             \
+        using dimension = std::integral_constant<size_t, 4>;                                       \
+        enum idx                                                                                   \
+        {                                                                                          \
+            __VA_ARGS__                                                                            \
+        };                                                                                         \
+        T _data[PP_COUNT(__VA_ARGS__)];                                                            \
         template <typename Rhs, detail::enable_if_convertible_t<Rhs, vec4<T>> = 0>                 \
         auto& operator=(Rhs rhs)                                                                   \
         {                                                                                          \
             vec4<T> v = rhs;                                                                       \
-            varx = v.x;                                                                            \
-            vary = v.y;                                                                            \
-            varz = v.z;                                                                            \
-            varw = v.w;                                                                            \
+            _data[varx] = v.x;                                                                     \
+            _data[vary] = v.y;                                                                     \
+            _data[varz] = v.z;                                                                     \
+            _data[varw] = v.w;                                                                     \
             return *this;                                                                          \
         }                                                                                          \
         template <typename Vec4>                                                                   \
         void swizzle_to(Vec4&& v)                                                                  \
         {                                                                                          \
-            v.x = varx;                                                                            \
-            v.y = vary;                                                                            \
-            v.z = varz;                                                                            \
-            v.w = varw;                                                                            \
+            v.x = _data[varx];                                                                     \
+            v.y = _data[vary];                                                                     \
+            v.z = _data[varz];                                                                     \
+            v.w = _data[varw];                                                                     \
         }                                                                                          \
     } varx##vary##varz##varw
 
@@ -283,7 +302,7 @@ namespace swzl
             return tmp /= rhs;
         }
 
-        auto& operator[](int i) { return ((T*)this)[i]; }
+        auto& operator[](int i) { return x._data[i]; }
     };
 
     template <typename Swizzler>
@@ -376,7 +395,7 @@ namespace swzl
             return tmp /= rhs;
         }
 
-        auto& operator[](int i) { return ((T*)this)[i]; }
+        auto& operator[](int i) { return x._data[i]; }
     };
 
     template <typename Swizzler>
@@ -474,29 +493,36 @@ namespace swzl
             return tmp /= rhs;
         }
 
-
-        auto& operator[](int i) { return ((T*)this)[i]; }
+        auto& operator[](int i) { return x._data[i]; }
     };
 
     template <typename Swizzler>
     vec4(Swizzler) -> vec4<typename Swizzler::value_type>;
 
-    template<typename Vec>
-    struct is_vec : std::false_type {};
+    template <typename Vec>
+    struct is_vec : std::false_type
+    {
+    };
 
-    template<typename T>
-    struct is_vec<vec2<T>> : std::true_type {};
+    template <typename T>
+    struct is_vec<vec2<T>> : std::true_type
+    {
+    };
 
-    template<typename T>
-    struct is_vec<vec3<T>> : std::true_type {};
+    template <typename T>
+    struct is_vec<vec3<T>> : std::true_type
+    {
+    };
 
-    template<typename T>
-    struct is_vec<vec4<T>> : std::true_type {};
+    template <typename T>
+    struct is_vec<vec4<T>> : std::true_type
+    {
+    };
 
-    template<typename T>
+    template <typename T>
     inline constexpr auto is_vec_v = is_vec<T>::value;
 
-    template<typename Vec, std::enable_if_t<is_vec_v<Vec>, int> = 0>
+    template <typename Vec, std::enable_if_t<is_vec_v<Vec>, int> = 0>
     inline auto operator*(typename Vec::value_type s, Vec v)
     {
         return v * s;
@@ -513,6 +539,8 @@ namespace swzl
     using ivec4 = vec4<int>;
 } // namespace swzl
 
+#undef PP_COUNT
+#undef PP_COUNT_
 #undef VEC_BASIC
 #undef VEC_SWIZZLE2
 #undef VEC_SWIZZLE3
