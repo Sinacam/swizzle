@@ -1,5 +1,5 @@
 # swizzle
-swizzle is a C++ standard-compliant implementation of [GLSL vector swizzling][2], i.e. referring to components in arbitrary combinations.
+swizzle is a C++ standard-compliant implementation of [GLSL vector swizzling][2], i.e. referring to components in arbitrary combinations
 
 ```c++
 swzl::dvec4 v1 = {1, 2, 3, 4};
