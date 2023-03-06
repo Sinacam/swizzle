@@ -6,6 +6,8 @@
 //      swzl::dvec4 v2 = v1.xxyy;
 //      v2.yxz = v1.rgb;
 //      v2.spt = swzl::dvec3{5, 6, 7};
+// or by indexing
+//      v1[0] = v2[2];
 // vecN<T> is the template for a vector of N elements of type T.
 // dvecN, fvecN, ivecN are aliases to its specialization.
 // All swizzles have unspecified types, but is guaranteed to be unique to swizzle.
