@@ -1,7 +1,7 @@
 #ifndef SWIZZLE_HPP_INCLUDED
 #define SWIZZLE_HPP_INCLUDED
 
-// swizzle is a C++ standard-compliant implementation of glsl vector swizzling.
+// swizzle is a C++ standard-compliant implementation of glsl vector swizzling, i.e. referring to components in arbitrary combinations
 //      swzl::dvec4 v1 = {1, 2, 3, 4};
 //      swzl::dvec4 v2 = v1.xxyy;
 //      v2.yxz = v1.rgb;
